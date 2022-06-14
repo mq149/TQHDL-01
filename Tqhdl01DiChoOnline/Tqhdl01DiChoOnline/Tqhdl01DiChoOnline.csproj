@@ -9,6 +9,7 @@
     <None Remove="MySql.Data" />
     <None Remove="Config\" />
     <None Remove="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
+    <None Remove="Database\" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MySql.Data" Version="8.0.29" />
@@ -16,5 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Config\" />
+    <Folder Include="Database\" />
   </ItemGroup>
 </Project>
