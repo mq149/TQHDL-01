@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <style>
+            .bar {
+                fill: steelblue;
+            }
+
+            div.tooltip {
+                position: absolute;
+                padding: 10px;
+                font: 12px sans-serif;
+                background: lightsteelblue;
+                border: 0px;
+                border-radius: 8px;
+                pointer-events: none;
+            }
+        </style>
+        <title>Most sold products</title>
+    </head>
+    <body>
+        <h1 id="chart-title">Most sold products</h1>
+        <svg width="1000" height="600"></svg>
+        <script>
+            function getDetail(data) {
+                return (
+                    `Product id: ${data.product_id}<br>` +
+                    `Product name: ${data.product_name}<br>` +
+                    `Sold: ${data.unit}`
+                );
+            }
+            var tooltip = d3
+                .select("body")
+                .append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+
+            console.log("Hello world");
+            let storeId = 2;
+            let limit = 10;
+            document.getElementById(
+                "chart-title"
+            ).innerHTML = `Top ${limit} most sold products from store ${storeId}`;
+            const most_sold_api = `https://localhost:5001/api/product/most-sold?storeId=${storeId}&limit=${limit}`;
+            d3.json(most_sold_api, function (error, data) {
+                if (error) {
+                    alert(error);
+                    return;
+                }
+                console.log(data);
+                // SVG set up
+                var svg = d3.select("svg"),
+                    margin = 150,
+                    width = svg.attr("width"),
+                    height = svg.attr("height") - margin;
+                var xScale = d3
+                        .scaleBand()
+                        .range([0, width - margin])
+                        .padding(0.4),
+                    yScale = d3.scaleLinear().range([height, 0]);
+
+                // Axis set up
+                // X axis
+                svg.append("text")
+                    .attr("class", "x label")
+                    .attr("x", width / 2)
+                    .attr("y", height + margin)
+                    .text("Sản phẩm");
+                // Y axis
+                svg.append("text")
+                    .attr("class", "y label")
+                    .attr("x", 0)
+                    .attr("y", 20)
+                    .text("Số lượng bán");
+                // Data mapping
+                xScale.domain(
+                    data.map(function (d) {
+                        return d.product_name;
+                    })
+                );
+                yScale.domain([
+                    0,
+                    d3.max(data, function (d) {
+                        return d.unit;
+                    }),
+                ]);
+
+                // Bar chart
+                var translateX = 120,
+                    translateY = 20;
+                var g = svg
+                    .append("g")
+                    .attr(
+                        "transform",
+                        "translate(" + translateX + ", " + translateY + ")"
+                    );
+                g.append("g")
+                    .attr("transform", "translate(0, " + height + ")")
+                    .call(d3.axisBottom(xScale));
+                g.append("g").call(
+                    d3
+                        .axisLeft(yScale)
+                        .tickFormat(function (d, i) {
+                            if (i == 0) return;
+                            return d; // + ' người';
+                        })
+                        .ticks(10)
+                );
+                g.attr("class", "x axis")
+                    .selectAll("text")
+                    .style("text-anchor", "end")
+                    .attr("dx", "-.8em")
+                    .attr("dy", ".15em")
+                    .attr("transform", "rotate(-30)");
+                g.selectAll(".bar")
+                    .data(data)
+                    .enter()
+                    .append("rect")
+                    .attr("class", "bar")
+                    .attr("x", function (d) {
+                        return xScale(d.product_name);
+                    })
+                    .attr("y", function (d) {
+                        return yScale(d.unit);
+                    })
+                    .attr("width", xScale.bandwidth())
+                    .attr("height", function (d) {
+                        return height - yScale(d.unit);
+                    })
+                    .on("mouseover", function (d) {
+                        tooltip
+                            .transition()
+                            .duration(100)
+                            .style("opacity", 0.9);
+                        tooltip
+                            .html(getDetail(d))
+                            .style("left", d3.event.pageX + "px")
+                            .style("top", d3.event.pageY - 28 + "px");
+                    })
+                    .on("mouseout", function (d) {
+                        tooltip.transition().duration(100).style("opacity", 0);
+                    });
+            });
+        </script>
+    </body>
+</html>
