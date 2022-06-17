@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <title>Running low</title>
+        <style>
+            /* svg {
+                border: 1px red solid;
+            } */
+            div.tooltip {
+                position: absolute;
+                padding: 10px;
+                font: 12px sans-serif;
+                background: #acfdea;
+                border: 0px;
+                border-radius: 8px;
+                pointer-events: none;
+            }
+        </style>
+    </head>
+    <body>
+        <h1 id="chart-title">Running low on stock products</h1>
+        <svg width="1000" height="600"></svg>
+        <script>
+            let storeId = 4;
+            document.getElementById(
+                "chart-title"
+            ).innerHTML = `Running low on stock products from store ${storeId}`;
+            const running_low_api = `https://localhost:5001/api/product/running-low?storeId=${storeId}`;
+            // hover tooltip
+            var tooltip = d3
+                .select("body")
+                .append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+            // set the dimensions and margins of the graph
+            var margin = { top: 20, right: 20, bottom: 40, left: 200 },
+                width = 1000 - margin.left - margin.right,
+                height = 600 - margin.top - margin.bottom;
+
+            // append the svg object to the body of the page
+            var svg = d3
+                .select("svg")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr(
+                    "transform",
+                    "translate(" + margin.left + "," + margin.top + ")"
+                );
+
+            d3.json(running_low_api, function (error, data) {
+                if (error) {
+                    alert(error);
+                    return;
+                }
+                console.log(data);
+                // Add X axis
+                var x = d3.scaleLinear().domain([0, 200]).range([0, width]);
+                svg.append("g")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                    .attr("transform", "translate(-10,0)rotate(-45)")
+                    .style("text-anchor", "end");
+
+                // Y axis
+                var y = d3
+                    .scaleBand()
+                    .range([0, height])
+                    .domain(
+                        data.map(function (d) {
+                            return d.name;
+                        })
+                    )
+                    .padding(0.1);
+                svg.append("g").call(d3.axisLeft(y));
+
+                //Bars
+                svg.selectAll("myRect")
+                    .data(data)
+                    .enter()
+                    .append("rect")
+                    .attr("x", x(0))
+                    .attr("y", function (d) {
+                        return y(d.name);
+                    })
+                    .attr("width", function (d) {
+                        return x(d.in_stock);
+                    })
+                    .attr("height", y.bandwidth())
+                    .attr("fill", "#69b3a2");
+
+                // hover events
+                svg.selectAll("rect")
+                    .on("mouseover", function (d) {
+                        tooltip
+                            .transition()
+                            .duration(100)
+                            .style("opacity", 0.9);
+                        tooltip
+                            .html(getDetail(d))
+                            .style("left", d3.event.pageX + "px")
+                            .style("top", d3.event.pageY - 28 + "px");
+                    })
+                    .on("mouseout", function (d) {
+                        tooltip.transition().duration(100).style("opacity", 0);
+                    });
+
+                function getDetail(data) {
+                    return (
+                        `Product id: ${data.id}<br>` +
+                        `Product name: ${data.name}<br>` +
+                        `In stock: ${data.in_stock}`
+                    );
+                }
+            });
+        </script>
+    </body>
+</html>

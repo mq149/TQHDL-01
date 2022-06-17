@@ -57,5 +57,21 @@ namespace Tqhdl01DiChoOnline.Controllers
             var table = MySqlDb.executeQuery(_configuration, query);
             return new JsonResult(table);
         }
+
+        [HttpGet("running-low")]
+        public JsonResult RunningLow(int? storeId, int limit = 10)
+        {
+            string query = @"
+                    SELECT id, name, in_stock
+                    FROM products
+                    WHERE in_stock <= 200 ";
+            if (storeId != null)
+            {
+                query += "AND store_id = " + storeId.Value + " ";
+            }
+            query += @"ORDER BY in_stock";
+            var table = MySqlDb.executeQuery(_configuration, query);
+            return new JsonResult(table);
+        }
     }
 }
