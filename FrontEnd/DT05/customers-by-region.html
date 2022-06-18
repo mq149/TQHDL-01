@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script src="https://d3js.org/d3.v4.js"></script>
+        <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+        <script src="https://d3js.org/topojson.v2.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+
+        <title>Customers in Ho Chi Minh City</title>
+        <style>
+            body {
+                margin: 0;
+                position: fixed;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                left: 0;
+            }
+            svg {
+                width: 100%;
+                height: 100%;
+            }
+            /* .subunit {
+                fill: #eaeaea;
+                border: 1px red solid;
+            } */
+            /* .subunit-boundary {
+                fill: none;
+                stroke: rgb(42, 42, 42);
+                stroke-dasharray: 2, 2;
+                stroke-linejoin: round;
+            } */
+            div.tooltip {
+                position: absolute;
+                padding: 10px;
+                font: 12px sans-serif;
+                background: rgb(220, 217, 212);
+                border: 0px;
+                border-radius: 8px;
+                pointer-events: none;
+            }
+            .container {
+                float: left;
+            }
+            /* .subunit.dis_1_1 {
+                fill: #fea;
+            }
+            .subunit.dis_2_1 {
+                fill: #cba;
+            }
+            .subunit.dis_3_1 {
+                fill: #acc;
+            }
+            .subunit.dis_4_1 {
+                fill: rgb(113, 156, 244);
+            }
+            .subunit.dis_5_1 {
+                fill: rgb(43, 144, 144);
+            }
+            .subunit.dis_6_1 {
+                fill: rgb(209, 132, 195);
+            }
+            .subunit.dis_7_1 {
+                fill: rgb(185, 102, 102);
+            }
+            .subunit.dis_8_1 {
+                fill: rgb(139, 139, 214);
+            }
+            .subunit.dis_9_1 {
+                fill: rgb(123, 189, 151);
+            }
+            .subunit.dis_10_1 {
+                fill: rgb(33, 104, 190);
+            }
+            .subunit.dis_11_1 {
+                fill: rgb(233, 172, 58);
+            }
+            .subunit.dis_12_1 {
+                fill: rgb(137, 120, 249);
+            }
+            .subunit.dis_13_1 {
+                fill: #cca;
+            }
+            .subunit.dis_14_1 {
+                fill: rgb(88, 240, 217);
+            }
+            .subunit.dis_15_1 {
+                fill: rgb(204, 246, 211);
+            }
+            .subunit.dis_16_1 {
+                fill: rgb(238, 168, 130);
+            }
+            .subunit.dis_17_1 {
+                fill: rgb(222, 43, 219);
+            }
+            .subunit.dis_18_1 {
+                fill: rgb(255, 163, 166);
+            }
+            .subunit.dis_19_1 {
+                fill: rgb(50, 150, 112);
+            }
+            .subunit.dis_20_1 {
+                fill: rgb(154, 119, 206);
+            }
+            .subunit.dis_21_1 {
+                fill: rgb(77, 77, 151);
+            }
+            .subunit.dis_22_1 {
+                fill: #cce;
+            }
+            .subunit.dis_23_1 {
+                fill: rgb(50, 199, 20);
+            }
+            .subunit.dis_24_1 {
+                fill: #cce;
+            } */
+        </style>
+    </head>
+    <body>
+        <h1 id="chart-title">Customers in Districts of Ho Chi Minh City</h1>
+        <div
+            class="container"
+            id="choropleth-map"
+            style="min-width: 880px"
+        ></div>
+        <div class="container" id="bar-chart"></div>
+        <script>
+            let district_id_by_name = {};
+
+            const domains = [2, 4, 8, 12, 25, 30];
+            const colorScheme = d3.schemeBlues[7];
+            const activeColorScheme = d3.schemeOranges[7];
+            var colorScale = d3
+                .scaleThreshold()
+                .domain(domains)
+                .range(colorScheme);
+
+            var activeColorScale = d3
+                .scaleThreshold()
+                .domain(domains)
+                .range(activeColorScheme);
+
+            var margin = { top: 20, right: 30, bottom: 40, left: 100 },
+                bar_width = 460 - margin.left - margin.right,
+                bar_height = 460 - margin.top - margin.bottom;
+
+            // append the svg object to the body of the page
+            var svg_bar = d3
+                .select(".container#bar-chart")
+                .append("svg")
+                .attr("fill", "transparent")
+                .style("background-color", "transparent")
+                .attr("width", bar_width + margin.left + margin.right)
+                .attr("height", bar_height + margin.top + margin.bottom)
+                .attr("z-index", 1000)
+                .append("g")
+                .attr(
+                    "transform",
+                    "translate(" + margin.left + "," + margin.top + ")"
+                )
+                .attr("fill", "transparent");
+
+            var width = 900;
+            var height = 500;
+            var center = [106.34899620666437, 16.553160650957434];
+            var scale = 100000;
+            var offset = [width / 2 - 500, height / 2 - scale / 10 - 300];
+            var svg = d3
+                .select(".container#choropleth-map")
+                .append("svg")
+                .attr("width", 800)
+                .attr("height", 1000);
+
+            var legend = d3
+                .legendColor()
+                .scale(colorScale)
+                .labelFormat(d3.format(".0f"));
+
+            var projection = d3
+                .geoMercator()
+                .translate(offset)
+                .scale([scale])
+                .center(center);
+
+            var path = d3.geoPath().projection(projection);
+            // hover tooltip
+            var tooltip = d3
+                .select("body")
+                .append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+
+            var map_url = "../hcmc_map/hcmc.json";
+            const customer_by_region_api = `https://localhost:5001/api/customer/by-region`;
+
+            var customerByDistrict = {};
+
+            // Load customers by region data
+            d3.json(customer_by_region_api, function (err, data) {
+                if (err) return console.log(err);
+                customerByDistrict = toCustomerByDistrictName(data);
+                console.log(data);
+                console.log(customerByDistrict);
+
+                // Load the map
+                d3.json(map_url, function (error, hcmc) {
+                    if (error) return console.log(error);
+                    let features = topojson.feature(
+                        hcmc,
+                        hcmc.objects.districts
+                    ).features;
+                    // Draw the districts
+                    svg.selectAll(".subunit")
+                        .data(features)
+                        .enter()
+                        .append("path")
+                        .attr("class", function (d) {
+                            return "subunit " + d.properties.ID_2;
+                        })
+                        .attr("fill", function (d) {
+                            return getFillColor(d, false);
+                        })
+                        .attr("d", path)
+                        .style("stroke", "black");
+
+                    // Add district name labels
+                    svg.selectAll(".label")
+                        .data(features)
+                        .enter()
+                        .append("text")
+                        .attr("class", "label")
+                        .attr("transform", function (d) {
+                            return "translate(" + path.centroid(d) + ")";
+                        })
+                        .style("text-anchor", "middle")
+                        .style("font-size", "12px")
+                        .style("pointer-events", "none")
+                        .text(function (d) {
+                            // console.log(d.properties.NAME_2);
+                            return d.properties.NAME_2;
+                        });
+
+                    // Add hover events
+                    svg.selectAll("path.subunit")
+                        .on("mouseover", function (d) {
+                            d3.select(this).attr("fill", function (d) {
+                                return getFillColor(d, true);
+                            });
+                            tooltip
+                                .transition()
+                                .duration(100)
+                                .style("opacity", 0.9);
+                            tooltip
+                                .html(getDetail(d.properties.NAME_2))
+                                .style("left", d3.event.pageX + "px")
+                                .style("top", d3.event.pageY - 28 + "px");
+                        })
+                        .on("mouseout", function (d) {
+                            d3.select(this).attr("fill", function (d) {
+                                return getFillColor(d, false);
+                            });
+                            tooltip
+                                .transition()
+                                .duration(100)
+                                .style("opacity", 0);
+                        });
+
+                    // Setup legend bar
+                    svg.append("g")
+                        .attr("transform", "translate(50,50)")
+                        .call(legend);
+                });
+
+                // Add bar chart
+                makeBarChart(data);
+            });
+
+            // Bar chart function
+            function makeBarChart(data) {
+                // set the dimensions and margins of the graph
+
+                // Add X axis
+                var x = d3.scaleLinear().domain([0, 40]).range([0, bar_width]);
+                svg_bar
+                    .append("g")
+                    .attr("transform", "translate(0," + bar_height + ")")
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                    .attr("transform", "translate(-10,0)rotate(-45)")
+                    .style("text-anchor", "end");
+
+                // Y axis
+                var y = d3
+                    .scaleBand()
+                    .range([0, bar_height])
+                    .domain(
+                        data.map(function (d) {
+                            return d.district;
+                        })
+                    )
+                    .padding(0.1);
+                svg_bar.append("g").call(d3.axisLeft(y));
+
+                //Bars
+                svg_bar
+                    .selectAll("myRect")
+                    .data(data)
+                    .enter()
+                    .append("rect")
+                    .attr("x", x(0))
+                    .attr("y", function (d) {
+                        return y(d.district);
+                    })
+                    .attr("width", function (d) {
+                        return x(d.customers);
+                    })
+                    .attr("height", y.bandwidth())
+                    .attr("fill", "steelblue");
+
+                // Labels
+                svg_bar
+                    .selectAll("myRect")
+                    .data(data)
+                    .enter()
+                    .append("text")
+                    .attr("class", "label")
+                    .text(function (d) {
+                        return d.customers;
+                    })
+                    .attr("x", function (d) {
+                        return x(d.customers) + 2;
+                    })
+                    .attr("y", function (d) {
+                        return y(d.district) + y.bandwidth() / 2;
+                    })
+                    .style("fill", "#000")
+                    .style("font-size", "12px");
+            }
+
+            // Helper functions
+            function toCustomerByDistrictName(data) {
+                let objects = {};
+                data.forEach(function (item) {
+                    let district = item.district;
+                    if (
+                        district.length > 8 &&
+                        (district.includes("Quận") ||
+                            district.includes("Huyện"))
+                    ) {
+                        console.log(district);
+                        district = district.replace("Quận ", "");
+                        district = district.replace("Huyện ", "");
+                    }
+                    objects[district] = item.customers;
+                });
+                return objects;
+            }
+
+            function getDetail(district) {
+                let customers = customerByDistrict[district] || 0;
+                return (
+                    `District name: ${district} <br>` +
+                    `Customers: ${customers}`
+                );
+            }
+
+            function getFillColor(d, active = false) {
+                let districtName = d.properties.NAME_2;
+                let total = 0;
+                if (customerByDistrict.hasOwnProperty(districtName)) {
+                    total = customerByDistrict[districtName];
+                }
+                return active ? activeColorScale(total) : colorScale(total);
+            }
+        </script>
+    </body>
+</html>
