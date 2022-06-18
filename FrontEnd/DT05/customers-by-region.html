@@ -319,6 +319,7 @@
                     })
                     .attr("height", y.bandwidth())
                     .attr("fill", "steelblue");
+
                 // Labels
                 svg_bar
                     .selectAll("myRect")
@@ -330,12 +331,12 @@
                         return d.customers;
                     })
                     .attr("x", function (d) {
-                        return x(d.customers) / 2 - 2;
+                        return x(d.customers) + 2;
                     })
                     .attr("y", function (d) {
                         return y(d.district) + y.bandwidth() / 2;
                     })
-                    .style("fill", "#fff")
+                    .style("fill", "#000")
                     .style("font-size", "12px");
             }
 
