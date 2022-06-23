@@ -119,3 +119,36 @@ WHERE o.store_id = 2
 GROUP BY product_category
 ORDER BY sales_amount DESC
 -- LIMIT 10
+
+-- DT18 ------------------------------------------------------------
+-- Rating by product
+SELECT p.id as product_id, p.name as product_name, AVG(pr.rating) as average_rating
+FROM product_reviews pr
+	JOIN products p ON p.id = pr.product_id
+WHERE p.store_id = 2
+GROUP BY product_id, product_name
+
+-- Rating by product category
+SELECT pc.id as product_category_id, pc.name as product_category_name, AVG(pr.rating) as average_rating
+FROM product_reviews pr
+	JOIN products p ON p.id = pr.product_id
+	JOIN product_categories pc ON pc.id = p.product_category_id
+WHERE p.store_id = 2
+GROUP BY product_category_id, product_category_name
+
+-- Most 1 point rating:
+-- Product
+SELECT p.id as product_id, p.name as product_name, pr.rating as rating, COUNT(*) as count
+FROM product_reviews pr
+	JOIN products p ON p.id = pr.product_id
+WHERE pr.rating = 1 AND p.store_id = 2
+GROUP BY product_id, product_name, rating
+ORDER BY count DESC
+-- Product category
+SELECT pc.id as product_category_id, pc.name as product_category_name, pr.rating as rating, COUNT(*) as count
+FROM product_reviews pr
+	JOIN products p ON p.id = pr.product_id
+	JOIN product_categories pc ON pc.id = p.product_category_id
+WHERE pr.rating = 1 AND p.store_id = 2
+GROUP BY product_category_id, product_category_name, rating
+ORDER BY count DESC
