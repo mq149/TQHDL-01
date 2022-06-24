@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script src="https://d3js.org/d3.v4.js"></script>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+            integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+            crossorigin="anonymous"
+        />
+        <title>Revenue</title>
+        <style>
+            div {
+                float: left;
+            }
+
+            div.tooltip {
+                position: absolute;
+                padding: 10px;
+                font: 14px sans-serif;
+                background: #c3e6de7d;
+                border: 0px;
+                border-radius: 8px;
+                pointer-events: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="revenue-chart">
+            <h3 id="title">Store revenue</h3>
+        </div>
+        <!-- Script -->
+        <script>
+            console.log("hello world");
+            var margin = { top: 10, right: 30, bottom: 100, left: 60 },
+                width = 700 - margin.left - margin.right,
+                height = 500 - margin.top - margin.bottom;
+            var tooltip = d3
+                .select("body")
+                .append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+            var svg = d3
+                .select("#revenue-chart")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr(
+                    "transform",
+                    "translate(" + margin.left + "," + margin.top + ")"
+                );
+
+            const STORE_ID = 2;
+            document.getElementById(
+                "title"
+            ).innerHTML = `Store ${STORE_ID} revenue`;
+            const REVENUE_API = function (storeId) {
+                return `https://localhost:5001/api/revenue/get?storeId=${storeId}`;
+            };
+            const formatDate = d3.timeFormat("%b-%Y");
+            d3.json(REVENUE_API(STORE_ID), function (_data) {
+                let data = _data.map((d) => {
+                    return {
+                        percentage: d.percentage,
+                        month: d.month,
+                        // date: d3.timeParse("%Y-%m")(d.month),
+                        date: formatDate(d3.timeParse("%Y-%m")(d.month)),
+                        revenue: d.revenue,
+                        value: d.revenue / 1000000,
+                        prev_value: d.previous_revenue / 1000000,
+                    };
+                });
+                console.log(data);
+                // var x = d3
+                //     .scaleTime()
+                //     .domain(
+                //         d3.extent(data, function (d) {
+                //             return d.date;
+                //         })
+                //     )
+                //     .range([0, width]);
+                var x = d3
+                    .scaleBand()
+                    .range([0, width])
+                    .domain(
+                        data.map(function (d) {
+                            return d.date;
+                        })
+                    )
+                    .padding(0.2);
+                svg.append("g")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                    .attr("transform", "translate(-10,0)rotate(-45)")
+                    .style("text-anchor", "end");
+                // Add Y axis
+                var y = d3.scaleLinear().domain([0, 700]).range([height, 0]);
+                svg.append("g").call(
+                    d3.axisLeft(y).tickFormat(function (d) {
+                        return d + "M";
+                    })
+                );
+                // Add the line
+                svg.append("path")
+                    .datum(data)
+                    .attr("fill", "none")
+                    .attr("stroke", "#69b3a2")
+                    .attr("stroke-width", 1.5)
+                    .attr(
+                        "d",
+                        d3
+                            .line()
+                            .x(function (d) {
+                                return x(d.date);
+                            })
+                            .y(function (d) {
+                                return y(d.value);
+                            })
+                    );
+                // Add the points
+                svg.append("g")
+                    .selectAll("dot")
+                    .data(data)
+                    .enter()
+                    .append("circle")
+                    .attr("cx", function (d) {
+                        return x(d.date);
+                    })
+                    .attr("cy", function (d) {
+                        return y(d.value);
+                    })
+                    .attr("r", 4)
+                    .attr("fill", "#69b3a2")
+                    .on("mouseover", function (d) {
+                        tooltip
+                            .transition()
+                            .duration(100)
+                            .style("opacity", 0.9);
+                        tooltip
+                            .html(getDetail(d))
+                            .style("left", d3.event.pageX + "px")
+                            .style("top", d3.event.pageY - 28 + "px");
+                    })
+                    .on("mouseout", function (d) {
+                        tooltip.transition().duration(100).style("opacity", 0);
+                    });
+            });
+
+            // Functions
+            function getDetail(d) {
+                let previous_revenue = d.prev_value || 0;
+                let previous_month = d.previous_month || "";
+                let percentage =
+                    d.percentage != null
+                        ? parseFloat(d.percentage).toFixed(2)
+                        : "";
+                let change = percentage >= 0 ? "+" : "";
+                let format = d3.timeFormat("%m-%Y");
+                let month = format(d3.timeParse("%Y-%m")(d.month));
+                return (
+                    `Tháng: ${month}<br>` +
+                    `Doanh số: ${d.revenue.toLocaleString("de-DE")} VNĐ` +
+                    (percentage == ""
+                        ? ""
+                        : `<br>Doanh số so với tháng trước: ${change}${percentage}%`)
+                );
+            }
+        </script>
+    </body>
+</html>
