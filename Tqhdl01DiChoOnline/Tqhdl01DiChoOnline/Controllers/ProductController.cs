@@ -73,5 +73,26 @@ namespace Tqhdl01DiChoOnline.Controllers
             var table = MySqlDb.executeQuery(_configuration, query);
             return new JsonResult(table);
         }
+
+        [HttpGet("average-rating-and-unit-sold")]
+        public JsonResult AverageRatingAndUnitSold(int? storeId)
+        {
+            string query = @"
+                    SELECT s.product_id as product_id, s.product_name as product_name, s.sold as sold, r.average_rating as average_rating
+                    FROM
+	                    (SELECT p.id as product_id, p.name as product_name, SUM(od.unit) as sold
+	                    FROM products p
+		                    JOIN order_details od ON od.product_id = p.id
+                        " + (storeId.HasValue ? ("WHERE p.store_id = " + storeId.Value) : "") + @"
+                        GROUP BY product_id, product_name) AS s,
+	                    (SELECT p.id as product_id, p.name as product_name, AVG(pr.rating) as average_rating
+	                    FROM products p
+		                    JOIN product_reviews pr ON pr.product_id = p.id
+                        " + (storeId.HasValue ? ("WHERE p.store_id = " + storeId.Value) : "") + @"
+	                    GROUP BY product_id, product_name) as r
+                    WHERE s.product_id = r.product_id";
+            var table = MySqlDb.executeQuery(_configuration, query);
+            return new JsonResult(table);
+        }
     }
 }
